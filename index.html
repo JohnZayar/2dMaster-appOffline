@@ -2096,7 +2096,7 @@
         }
         function closeVoucherModal() { document.getElementById('voucherModal').style.display = 'none'; }
 
-        function loadVoucherContent() {
+                function loadVoucherContent() {
             let selectedTarget = document.getElementById('voucherUserSelect').value;
             let content = document.getElementById('voucherModalContent');
             if(!selectedTarget) { content.innerHTML = '<div style="color:#6b7280; text-align:center; padding:15px;">ရွေးချယ်ပေးပါ</div>'; return; }
@@ -2123,18 +2123,71 @@
                         <span>${name} (${bKey})</span><span style="color:#f1c40f; font-size:12px;">${bData.time}</span>
                     </div>`;
                 bData.items.forEach(item => {
+                    let itemId = Number(item.id);
                     let isWin = winNum && item.no.trim() === winNum;
                     let rowStyle = isWin ? 'background:rgba(52, 211, 153, 0.25); color:#34d399; font-weight:bold; padding:3px 6px; border-radius:4px;' : 'color:#d1d5db;';
                     let winBadge = isWin ? ' 🎯 [ပေါက်]' : '';
                     
+                    // ဂဏန်း သို့မဟုတ် ပမာဏကို နှိပ်ပြီး တိုက်ရိုက်ပြင်လို့ရအောင် လုပ်ပေးထားပါတယ်
                     html += `<div style="font-size:12px; display:flex; justify-content:space-between; padding:3px 0; ${rowStyle}">
-                        <span>ဂဏန်း: ${item.no}${winBadge}</span><span>${(item.amt || item.amount).toLocaleString()} ကျပ်</span>
+                        <span style="cursor:pointer;" onclick="editVoucherItem(${itemId}, ${isAkan})">ဂဏန်း: <b>${item.no}</b>${winBadge}</span>
+                        <span style="cursor:pointer;" onclick="editVoucherItem(${itemId}, ${isAkan})">${(item.amt || item.amount).toLocaleString()} ကျပ်</span>
                     </div>`;
                 });
                 html += `<div style="border-top:1px dashed #374151; margin-top:4px; padding-top:4px; text-align:right; font-weight:bold; color:#34d399;">Total ${bTotal.toLocaleString()}</div></div>`;
             });
             content.innerHTML = html;
         }
+                function editVoucherItem(itemId, isAkan) {
+            let dataSource = isAkan ? akanEntries : listData;
+            let item = dataSource.find(i => Number(i.id) === Number(itemId));
+            if(!item) return;
+
+            let currentText = `ဂဏန်း: ${item.no} , ငွေပမာဏ: ${item.amt || item.amount}`;
+            let promptText = prompt(`ဘောက်ချာစာရင်း ပြင်ဆင်ရန် (သို့) ဖျက်ရန်\n\nပုံစံ - ဂဏန်း=ပမာဏ (ဥပမာ - 12=500)\n(စာသားအကုန်ဖျက်ပြီး OK နှိပ်ပါက ဤစာရင်း ဖျက်သွားပါမည်)`, `${item.no}=${item.amt || item.amount}`);
+
+            if(promptText === null) return;
+
+            promptText = promptText.trim();
+            if(promptText === "") {
+                // ဘာမှမထည့်ဘဲ OK နှိပ်ရင် ဖျက်မယ်
+                let idx = dataSource.findIndex(i => Number(i.id) === Number(itemId));
+                if(idx !== -1) {
+                    dataSource.splice(idx, 1);
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        showMessage("✅ စာရင်း ဖျက်ပြီးပါပြီ။");
+                    });
+                }
+                return;
+            }
+
+            let parts = promptText.split('=');
+            if(parts.length === 2) {
+                let newNo = parts[0].trim();
+                let newAmt = parseInt(convertMyanmarNumbers(parts[1]), 10);
+                if(newNo && !isNaN(newAmt) && newAmt > 0) {
+                    item.no = newNo;
+                    item.amt = newAmt;
+                    if(item.amount !== undefined) item.amount = newAmt;
+
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        showMessage("✅ စာရင်း ပြင်ဆင်ပြီးပါပြီ။");
+                    });
+                } else {
+                    showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 12=500)");
+                }
+            } else {
+                showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 12=500)");
+            }
+        }
+
+
 
                 function renderPosTable() {
             let tbody = document.getElementById('posTableBody');

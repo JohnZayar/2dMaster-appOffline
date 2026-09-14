@@ -2138,19 +2138,20 @@
             });
             content.innerHTML = html;
         }
-                function editVoucherItem(itemId, isAkan) {
+            
+        function editVoucherItem(itemId, isAkan) {
             let dataSource = isAkan ? akanEntries : listData;
             let item = dataSource.find(i => Number(i.id) === Number(itemId));
             if(!item) return;
 
-            let currentText = `ဂဏန်း: ${item.no} , ငွေပမာဏ: ${item.amt || item.amount}`;
-            let promptText = prompt(`ဘောက်ချာစာရင်း ပြင်ဆင်ရန် (သို့) ဖျက်ရန်\n\nပုံစံ - ဂဏန်း=ပမာဏ (ဥပမာ - 12=500)\n(စာသားအကုန်ဖျက်ပြီး OK နှိပ်ပါက ဤစာရင်း ဖျက်သွားပါမည်)`, `${item.no}=${item.amt || item.amount}`);
+            // Prompt ထဲမှာ စာတွေအများကြီးမပါဘဲ ပြင်စရာ ဂဏန်း=ပမာဏ ကိုပဲ သန့်သန့်ရှင်းရှင်း ပြပေးပါမယ်
+            let promptText = prompt("ပြင်ဆင်ရန် (သို့) ဖျက်ရန် (အကုန်ဖျက်ပြီး OK နှိပ်ပါက ဖျက်မည်)", `${item.no}=${item.amt || item.amount}`);
 
             if(promptText === null) return;
 
             promptText = promptText.trim();
             if(promptText === "") {
-                // ဘာမှမထည့်ဘဲ OK နှိပ်ရင် ဖျက်မယ်
+                // ဘာမှမထည့်ဘဲ OK နှိပ်ရင် ဒီစာရင်းကို ဖျက်မယ်
                 let idx = dataSource.findIndex(i => Number(i.id) === Number(itemId));
                 if(idx !== -1) {
                     dataSource.splice(idx, 1);
@@ -2187,9 +2188,7 @@
             }
         }
 
-
-
-                function renderPosTable() {
+      function renderPosTable() {
             let tbody = document.getElementById('posTableBody');
             if(!tbody) return;
             let selectedUser = document.getElementById('posUserSelect').value;

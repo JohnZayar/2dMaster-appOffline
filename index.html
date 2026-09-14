@@ -2136,7 +2136,7 @@
             content.innerHTML = html;
         }
 
-        function renderPosTable() {
+                function renderPosTable() {
             let tbody = document.getElementById('posTableBody');
             if(!tbody) return;
             let selectedUser = document.getElementById('posUserSelect').value;
@@ -2153,10 +2153,64 @@
 
             let html = '';
             filteredList.slice().reverse().forEach(item => {
-                html += `<tr><td><b>${item.no}</b></td><td>${(item.amt || item.amount).toLocaleString()} ကျပ်</td><td style="text-align: center;"><button class="trash-btn" onclick="deletePosItem(${Number(item.id)})">🗑️</button></td></tr>`;
+                let itemId = Number(item.id);
+                // No နဲ့ Amount ကို တိုက်ရိုက်နှိပ်ပြီး ပြင်နိုင်အောင် onclick ထည့်ပေးထားပါတယ်
+                html += `<tr>
+                    <td><b style="cursor:pointer; color:#38bdf8;" onclick="editPosItem(${itemId}, 'no')">${item.no}</b></td>
+                    <td><span style="cursor:pointer; color:#34d399;" onclick="editPosItem(${itemId}, 'amt')">${(item.amt || item.amount).toLocaleString()} ကျပ်</span></td>
+                    <td style="text-align: center;"><button class="trash-btn" onclick="deletePosItem(${itemId})">🗑️</button></td>
+                </tr>`;
             });
             tbody.innerHTML = html;
         }
+                function editPosItem(itemId, fieldType) {
+            let currentSessionId = activeSessionId;
+            let currentSession = sessions.find(s => Number(s.id) === Number(currentSessionId));
+            if(winningNumbers[Number(currentSessionId)] || (currentSession && isSessionTimeExpired(currentSession))) {
+                showMessage("🔒 သတ်မှတ်ချိန် ကျော်လွန်သွားပြီဖြစ်၍ ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်။");
+                return;
+            }
+
+            let item = listData.find(i => Number(i.id) === Number(itemId));
+            if(!item) return;
+
+            let currentValue = fieldType === 'no' ? item.no : (item.amt || item.amount);
+            let titleText = fieldType === 'no' ? 'ဂဏန်း ပြင်ဆင်ရန်' : 'ပမာဏ (ဒဲ့) ပြင်ဆင်ရန်';
+            
+            let newValue = prompt(`${titleText}\n(စာသားအကုန်ဖျက်ပြီး OK နှိပ်ပါက ဤစာရင်း ဖျက်သွားပါမည်)`, currentValue);
+            
+            if(newValue === null) return; // Cancel နှိပ်ရင် ဘာမှမလုပ်ဘူး
+
+            newValue = newValue.trim();
+
+            if(newValue === "") {
+                // ဘာမှမထည့်ဘဲ OK နှိပ်ရင် ဒီစာရင်းကို ဖျက်မယ်
+                deletePosItem(itemId);
+                return;
+            }
+
+            if(fieldType === 'no') {
+                if(newValue.length < 1) {
+                    showMessage("❌ ဂဏန်းပုံစံ မမှန်ပါ။");
+                    return;
+                }
+                item.no = newValue;
+            } else {
+                let numAmt = parseInt(convertMyanmarNumbers(newValue), 10);
+                if(isNaN(numAmt) || numAmt <= 0) {
+                    showMessage("❌ ပမာဏ တန်ဖိုး မမှန်ပါ။");
+                    return;
+                }
+                item.amt = numAmt;
+                if(item.amount !== undefined) item.amount = numAmt;
+            }
+
+            localDB.set(STORAGE_KEY, listData, () => {
+                renderPosTable();
+                showMessage("✅ ပြင်ဆင်ပြီးပါပြီ။");
+            });
+        }
+
 
         function deletePosItem(itemId) {
             let currentSessionId = activeSessionId;

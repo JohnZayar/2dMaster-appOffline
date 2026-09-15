@@ -2139,13 +2139,13 @@
             content.innerHTML = html;
         }
             
-        function editVoucherItem(itemId, isAkan) {
+                function editVoucherItem(itemId, isAkan) {
             let dataSource = isAkan ? akanEntries : listData;
             let item = dataSource.find(i => Number(i.id) === Number(itemId));
             if(!item) return;
 
-            // Prompt ထဲမှာ စာတွေအများကြီးမပါဘဲ ပြင်စရာ ဂဏန်း=ပမာဏ ကိုပဲ သန့်သန့်ရှင်းရှင်း ပြပေးပါမယ်
-            let promptText = prompt("ပြင်ဆင်ရန် (သို့) ဖျက်ရန် (အကုန်ဖျက်ပြီး OK နှိပ်ပါက ဖျက်မည်)", `${item.no}=${item.amt || item.amount}`);
+            // Prompt ထဲမှာ အပေါ်က စာသားတွေ လုံးဝမပါတော့ဘဲ ဂဏန်းနဲ့ ပမာဏ သက်သက်ပဲ ပေါ်ပါမယ်
+            let promptText = prompt("", `${item.no}=${item.amt || item.amount}`);
 
             if(promptText === null) return;
 
@@ -2187,6 +2187,7 @@
                 showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 12=500)");
             }
         }
+
 
       function renderPosTable() {
             let tbody = document.getElementById('posTableBody');

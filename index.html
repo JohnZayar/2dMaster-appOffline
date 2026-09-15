@@ -426,6 +426,25 @@
             <div id="customModalBody" style="font-size:13px; color:#d1d5db; display:flex; flex-direction:column; gap:6px;"></div>
         </div>
     </div>
+    
+    <div class="modal" id="editItemModal">
+        <div class="custom-card" style="max-width: 320px;">
+            <div class="modal-header">
+                <span>✏️ စာရင်း ပြင်ဆင်ရန်</span>
+                <span onclick="closeEditItemModal()">✕</span>
+            </div>
+            <input type="hidden" id="editItemId">
+            <input type="hidden" id="editItemIsAkan" value="false">
+            <div class="form-group" style="margin-top: 8px;">
+                <label>ဂဏန်း = ပမာဏ</label>
+                <input type="text" id="editItemInput" placeholder="ဥပမာ - 34=2500" style="text-align: center; font-size: 16px; color: #38bdf8;">
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="confirm-btn-no" onclick="closeEditItemModal()">မလုပ်တော့ပါ</button>
+                <button class="confirm-btn-yes" onclick="saveEditedItemData()">သိမ်းမည်</button>
+            </div>
+        </div>
+    </div>
 
     <div class="modal" id="overLimitModal">
         <div class="custom-card">
@@ -2278,7 +2297,8 @@
             document.getElementById('inputUserLimit').value = p.limit || 50000;
             document.getElementById('addUserModal').style.display = 'flex';
         }
-                function editPosItemPrompt(itemId) {
+                        // POS ဇယားမှ ခဲတံကိုနှိပ်လျှင် မော်ဒယ်ဘောက်စ်ခေါ်ရန်
+        function editPosItemPrompt(itemId) {
             let currentSessionId = activeSessionId;
             let currentSession = sessions.find(s => Number(s.id) === Number(currentSessionId));
             if(winningNumbers[Number(currentSessionId)] || (currentSession && isSessionTimeExpired(currentSession))) {
@@ -2289,18 +2309,75 @@
             let item = listData.find(i => Number(i.id) === Number(itemId));
             if(!item) return;
 
-            // Prompt ထဲမှာ အပေါ်က စာသားတွေ လုံးဝမပါဘဲ နံပါတ်=ပမာဏ သက်သက်ပဲ ပေါ်ပါမယ်
-            let promptText = prompt("", `${item.no}=${item.amt || item.amount}`);
+            document.getElementById('editItemId').value = itemId;
+            document.getElementById('editItemIsAkan').value = "false";
+            document.getElementById('editItemInput').value = `${item.no}=${item.amt || item.amount}`;
+            document.getElementById('editItemModal').style.display = 'flex';
+        }
 
-            if(promptText === null) return;
-
-            promptText = promptText.trim();
-            if(promptText === "") {
-                deletePosItem(itemId);
+        // ဘောက်ချာမှ စာရင်းကိုနှိပ်လျှင် မော်ဒယ်ဘောက်စ်ခေါ်ရန်
+                // POS ဇယားမှ ခဲတံကိုနှိပ်လျှင် မော်ဒယ်ဘောက်စ်ခေါ်ရန်
+        function editPosItemPrompt(itemId) {
+            let currentSessionId = activeSessionId;
+            let currentSession = sessions.find(s => Number(s.id) === Number(currentSessionId));
+            if(winningNumbers[Number(currentSessionId)] || (currentSession && isSessionTimeExpired(currentSession))) {
+                showMessage("🔒 သတ်မှတ်ချိန် ကျော်လွန်သွားပြီဖြစ်၍ ပြင်ဆင်ခွင့် ပိတ်ထားပါသည်။");
                 return;
             }
 
-            let parts = promptText.split('=');
+            let item = listData.find(i => Number(i.id) === Number(itemId));
+            if(!item) return;
+
+            document.getElementById('editItemId').value = itemId;
+            document.getElementById('editItemIsAkan').value = "false";
+            document.getElementById('editItemInput').value = `${item.no}=${item.amt || item.amount}`;
+            document.getElementById('editItemModal').style.display = 'flex';
+        }
+
+        // ဘောက်ချာမှ စာရင်းကိုနှိပ်လျှင် မော်ဒယ်ဘောက်စ်ခေါ်ရန်
+        function editVoucherItem(itemId, isAkan) {
+            let dataSource = isAkan ? akanEntries : listData;
+            let item = dataSource.find(i => Number(i.id) === Number(itemId));
+            if(!item) return;
+
+            document.getElementById('editItemId').value = itemId;
+            document.getElementById('editItemIsAkan').value = isAkan ? "true" : "false";
+            document.getElementById('editItemInput').value = `${item.no}=${item.amt || item.amount}`;
+            document.getElementById('editItemModal').style.display = 'flex';
+        }
+
+        function closeEditItemModal() {
+            document.getElementById('editItemModal').style.display = 'none';
+        }
+
+        // မော်ဒယ်ဘောက်စ်မှ သိမ်းဆည်းသည့်အခါ
+        function saveEditedItemData() {
+            let itemId = Number(document.getElementById('editItemId').value);
+            let isAkan = document.getElementById('editItemIsAkan').value === "true";
+            let val = document.getElementById('editItemInput').value.trim();
+
+            let dataSource = isAkan ? akanEntries : listData;
+            let item = dataSource.find(i => Number(i.id) === Number(itemId));
+            if(!item) { closeEditItemModal(); return; }
+
+            if(val === "") {
+                // အကုန်ဖျက်ပြီး သိမ်းရင် ဒီစာရင်းကို ဖျက်မယ်
+                let idx = dataSource.findIndex(i => Number(i.id) === Number(itemId));
+                if(idx !== -1) {
+                    dataSource.splice(idx, 1);
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        if(isAkan) { renderAkanTable(); } else { renderPosTable(); }
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        closeEditItemModal();
+                        showMessage("✅ စာရင်း ဖျက်ပြီးပါပြီ။");
+                    });
+                }
+                return;
+            }
+
+            let parts = val.split('=');
             if(parts.length === 2) {
                 let newNo = parts[0].trim();
                 let newAmt = parseInt(convertMyanmarNumbers(parts[1]), 10);
@@ -2309,17 +2386,79 @@
                     item.amt = newAmt;
                     if(item.amount !== undefined) item.amount = newAmt;
 
-                    localDB.set(STORAGE_KEY, listData, () => {
-                        renderPosTable();
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        if(isAkan) { renderAkanTable(); } else { renderPosTable(); }
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        closeEditItemModal();
                         showMessage("✅ ပြင်ဆင်ပြီးပါပြီ။");
                     });
                 } else {
-                    showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 12=500)");
+                    showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 34=2500)");
                 }
             } else {
-                showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 12=500)");
+                showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 34=2500)");
             }
         }
+
+
+        function closeEditItemModal() {
+            document.getElementById('editItemModal').style.display = 'none';
+        }
+
+        // မော်ဒယ်ဘောက်စ်မှ သိမ်းဆည်းသည့်အခါ
+        function saveEditedItemData() {
+            let itemId = Number(document.getElementById('editItemId').value);
+            let isAkan = document.getElementById('editItemIsAkan').value === "true";
+            let val = document.getElementById('editItemInput').value.trim();
+
+            let dataSource = isAkan ? akanEntries : listData;
+            let item = dataSource.find(i => Number(i.id) === Number(itemId));
+            if(!item) { closeEditItemModal(); return; }
+
+            if(val === "") {
+                // အကုန်ဖျက်ပြီး သိမ်းရင် ဒီစာရင်းကို ဖျက်မယ်
+                let idx = dataSource.findIndex(i => Number(i.id) === Number(itemId));
+                if(idx !== -1) {
+                    dataSource.splice(idx, 1);
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        if(isAkan) { renderAkanTable(); } else { renderPosTable(); }
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        closeEditItemModal();
+                        showMessage("✅ စာရင်း ဖျက်ပြီးပါပြီ။");
+                    });
+                }
+                return;
+            }
+
+            let parts = val.split('=');
+            if(parts.length === 2) {
+                let newNo = parts[0].trim();
+                let newAmt = parseInt(convertMyanmarNumbers(parts[1]), 10);
+                if(newNo && !isNaN(newAmt) && newAmt > 0) {
+                    item.no = newNo;
+                    item.amt = newAmt;
+                    if(item.amount !== undefined) item.amount = newAmt;
+
+                    localDB.set(isAkan ? AKAN_KEY : STORAGE_KEY, dataSource, () => {
+                        if(isAkan) { renderAkanTable(); } else { renderPosTable(); }
+                        loadVoucherContent();
+                        renderLedgerGrid();
+                        renderGyingeGrid();
+                        closeEditItemModal();
+                        showMessage("✅ ပြင်ဆင်ပြီးပါပြီ။");
+                    });
+                } else {
+                    showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 34=2500)");
+                }
+            } else {
+                showMessage("❌ ပုံစံမမှန်ပါ။ (ဥပမာ - 34=2500)");
+            }
+        }
+
 
         function closeAddUserModal() { document.getElementById('addUserModal').style.display = 'none'; }
 

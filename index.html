@@ -2532,18 +2532,20 @@
             if(wni) wni.value = winningNumbers[Number(currentSessionId)] || '';
         }
 
-        function clearAllData() {
-            showConfirm("အချက်အလက်အားလုံးကို အမှန်တကယ် ဖျက်မှာ သေချာပါသလား?", () => {
-                localStorage.clear();
+                function clearAllData() {
+            showConfirm("ထိုးထားသော စာရင်းများနှင့် ပွဲစဉ်အချက်အလက်များကိုသာ ဖျက်မှာ သေချာပါသလား?", () => {
+                // ဒေတာစာရင်းများနှင့် ပွဲစဉ်များကိုသာ ဖျက်မည် (Profiles နှင့် Activation Key များ မပျက်စေရပါ)
+                localStorage.removeItem('offline_' + STORAGE_KEY);
+                localStorage.removeItem('offline_' + AKAN_KEY);
+                localStorage.removeItem('offline_2d_sessions');
+                localStorage.removeItem('offline_2d_winning');
+                localStorage.removeItem('offline_2d_limits');
+                localStorage.removeItem('offline_2d_closed_numbers');
+                
                 location.reload();
             });
         }
 
-        checkDeviceSecurity();
-        setFocusBox('no');
-        loadOfflineData(() => {
-            switchPage('Home');
-        });
     </script>
 </body>
 </html>
